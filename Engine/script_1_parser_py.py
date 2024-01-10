@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import json
 import pandas as pd
 import openpyxl as xl
+import time
 import xlsxwriter
 from datetime import date
 current_date = date.today()
@@ -26,11 +27,11 @@ req = requests.get(url).text
 src = req
 
 # запись данных для минимизации запросов на сайт
-with open("index.html", "w", encoding = "utf-8") as file:
+with open("Data/index.html", "w", encoding = "utf-8") as file:
     file.write(src)
 
 # чтение из файла
-with open("index.html", encoding = "utf_8_sig") as file:
+with open("Data/index.html", encoding = "utf_8_sig") as file:
     src = file.read()
 
 soup = BeautifulSoup(src, "lxml")
@@ -48,11 +49,11 @@ for item in all_categories_hrefs:
 
 
 # заеносим данные в файл json
-with open("all_categories_dict.json", "w", encoding = "utf-8") as file:
+with open("Data/all_categories_dict.json", "w", encoding = "utf-8") as file:
     json.dump(all_categories_dict, file, indent=4, ensure_ascii= False)
     
 # создаем переменную из файла json
-with open("all_categories_dict.json", encoding = "utf-8") as file:
+with open("Data/all_categories_dict.json", encoding = "utf-8") as file:
     all_categories = json.load(file)
     
 def href_not_has_defenite_class(tag):
@@ -67,6 +68,7 @@ def div_has_definite_class():
 count = 0
 # цикл перебора категорий и сохранение ссылок в файл
 for category_name, category_href in all_categories.items():
+    print(f"Обработка категории {category_name} {count +1} из {len(all_categories_dict)}")
     # ограничение итераций по количеству ссылок в словаре
     if count<=0: #len(all_categories_dict):
         req = requests.get(url=category_href, headers=headers)
@@ -145,7 +147,7 @@ link_format = workbook.add_format({  # type: ignore
 }) """
 
 with pd.ExcelWriter(
-        f"Data/Сантим_{current_date}.xlsx",
+        f"Data/Output/Сантим_{current_date}.xlsx",
         engine="xlsxwriter",
         mode='w') as writer:
 
@@ -159,4 +161,5 @@ with pd.ExcelWriter(
                         })
     writer.sheets[sheet_name].set_column('D:D', None, link_format)
 
-print("ок")
+print("Сбор данных завершен")
+time.sleep(3)
