@@ -5,14 +5,17 @@ import pandas as pd
 import openpyxl as xl
 import time
 import xlsxwriter
+import PySimpleGUI as sg
 from datetime import date
+
 current_date = date.today()
 # создаем df для итоговых результатов
 san_team_vendors_dict = {"Vendor":[],
                        "Nomination":[],
                        "Price":[],
                        "Reference":[],
-                       "Category_Name":[]}
+                       "Category_Name":[],
+                       "Sub_category_1":[]}
 df_san_team_vendors = pd.DataFrame(san_team_vendors_dict)
 
 # данные запроса браузера
@@ -25,6 +28,8 @@ headers = {
 url = "https://www.san.team/catalog/"
 req = requests.get(url).text
 src = req
+
+sg.Window(title=f"Parsing {url}", layout=[[]], margins=(400, 200)).read()
 
 # запись данных для минимизации запросов на сайт
 with open("Data/index.html", "w", encoding = "utf-8") as file:
@@ -97,7 +102,7 @@ for category_name, category_href in all_categories.items():
             with open(f"Data/Sub_categories/{count}_{category_name}_sub_categories.json", encoding = "utf-8") as file:
                 all_sub_cat_dict = json.load(file)
         count_sub_cat = 0
-        
+        vendor_count = 0
         def href_not_has_defenite_class(tag):
             return tag.has_attr("href") and not tag.has_attr('class')# = \"catalog-lvl-2__title \"')
         
@@ -108,6 +113,7 @@ for category_name, category_href in all_categories.items():
                 soup = BeautifulSoup(src, "lxml")
                 if soup.find_all("div", class_ = "catalog-lvl-4__title") != None:
                     art_List = soup.find_all("div", class_ = "catalog-lvl-4__title")
+                    print(f"Собрано {len(art_List)} позиций в категории {sub_category_name}")
                     for item in art_List:
                         art_text = item.text.strip() # наименование - 2
                         art_href ="https://www.san.team" + item.find("a").get("href") # ссылка - 4
@@ -115,9 +121,9 @@ for category_name, category_href in all_categories.items():
                         art_bs = BeautifulSoup(art_src, "lxml")
                         art_txt = art_bs.find("div", class_ = "detail-product-buy__article").text.strip()
                         art_name = art_txt[art_txt.find(" ")+1:]
-                        
                         price = float(art_bs.find("div", class_ = "detail-product-buy__buttons").find("a", class_="buyoneclick").get("data-productprice").replace(',', '.').replace(' ', ''))
-                        df_san_team_vendors.loc[len(df_san_team_vendors.index)]=[art_name, art_text, price, art_href, category_name]
+                        vendor_count +=1
+                        df_san_team_vendors.loc[len(df_san_team_vendors.index)]=[art_name, art_text, price, art_href, category_name, sub_category_name]
                         #print(art_name)
                         #print(art_text)
                         #print(price)
@@ -135,16 +141,7 @@ json_san_team_vendor = df_san_team_vendors.to_json(orient="table")
 with open("Data/СанТим.json", "w", encoding = "utf-8") as file:
     file.write(json_san_team_vendor)
     
-#xl_writer = pd.ExcelWriter("Data/Сантим.xlsx")
 sheet_name = 'Sheet_1'
-""" writer = pd.ExcelWriter(f"Data/Сантим_{current_date}.xlsx")
-workbook = writer.book
-link_format = workbook.add_format({  # type: ignore
-    'font_color': 'blue',
-    'underline': 1,
-    'valign': 'top',
-    'text_wrap': True,
-}) """
 
 with pd.ExcelWriter(
         f"Data/Output/Сантим_{current_date}.xlsx",
