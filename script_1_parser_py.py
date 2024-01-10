@@ -1,7 +1,19 @@
 import requests
-from bs4 import BeautifulSoup, Comment
+from bs4 import BeautifulSoup
 import json
-import re
+import pandas as pd
+import openpyxl as xl
+import xlsxwriter
+from datetime import date
+current_date = date.today()
+# создаем df для итоговых результатов
+san_team_vendors_dict = {"Vendor":[],
+                       "Nomination":[],
+                       "Price":[],
+                       "Reference":[],
+                       "Category_Name":[]}
+df_san_team_vendors = pd.DataFrame(san_team_vendors_dict)
+
 # данные запроса браузера
 headers = {
     "Accept": "*/*",
@@ -56,7 +68,7 @@ count = 0
 # цикл перебора категорий и сохранение ссылок в файл
 for category_name, category_href in all_categories.items():
     # ограничение итераций по количеству ссылок в словаре
-    if count<=3: #len(all_categories_dict):
+    if count<=0: #len(all_categories_dict):
         req = requests.get(url=category_href, headers=headers)
         src = req.text
         soup = BeautifulSoup(src, "lxml")
@@ -102,21 +114,49 @@ for category_name, category_href in all_categories.items():
                         art_txt = art_bs.find("div", class_ = "detail-product-buy__article").text.strip()
                         art_name = art_txt[art_txt.find(" ")+1:]
                         
-                        price = art_bs.find("div", class_ = "detail-product-buy__buttons").find("a", class_="buyoneclick").get("data-productprice")
-                        
-                        print(art_name)
-                        print(art_text)
-                        print(price)
-                        print(art_href)
-                        print(category_name)
+                        price = float(art_bs.find("div", class_ = "detail-product-buy__buttons").find("a", class_="buyoneclick").get("data-productprice").replace(',', '.').replace(' ', ''))
+                        df_san_team_vendors.loc[len(df_san_team_vendors.index)]=[art_name, art_text, price, art_href, category_name]
+                        #print(art_name)
+                        #print(art_text)
+                        #print(price)
+                        #print(art_href)
+                        #print(category_name)
+                        #print(df_san_team_vendors)
 
                 
     count +=1
 
 
 
+json_san_team_vendor = df_san_team_vendors.to_json(orient="table")
 
+with open("Data/СанТим.json", "w", encoding = "utf-8") as file:
+    file.write(json_san_team_vendor)
+    
+#xl_writer = pd.ExcelWriter("Data/Сантим.xlsx")
+sheet_name = 'Sheet_1'
+""" writer = pd.ExcelWriter(f"Data/Сантим_{current_date}.xlsx")
+workbook = writer.book
+link_format = workbook.add_format({  # type: ignore
+    'font_color': 'blue',
+    'underline': 1,
+    'valign': 'top',
+    'text_wrap': True,
+}) """
 
+with pd.ExcelWriter(
+        f"Data/Сантим_{current_date}.xlsx",
+        engine="xlsxwriter",
+        mode='w') as writer:
 
+    df_san_team_vendors.to_excel(writer, sheet_name=sheet_name, index=False)
+    workbook = writer.book
+    link_format = workbook.add_format({  # type: ignore
+                            'font_color': 'blue',
+                            'underline': 1,
+                            'valign': 'top',
+                            'text_wrap': True,
+                        })
+    writer.sheets[sheet_name].set_column('D:D', None, link_format)
 
 print("ок")
