@@ -13,18 +13,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from fake_useragent import UserAgent
+import traceback
 
 start_time = time.time()  # время начала выполнения
 URL = "https://www.san.team"
 
 current_date = date.today()
 # создаем df для итоговых результатов
-san_team_vendors_dict = {"Vendor":[],
-                       "Nomination":[],
-                       "Price":[],
-                       "Reference":[],
-                       "Category_Name":[],
-                       "Sub_category_1":[]}
+san_team_vendors_dict = {
+                        "Vendor":[],
+                        "Nomination":[],
+                        "Price":[],
+                        "Reference":[],
+                        "Category_Name":[],
+                        "Sub_category_1":[]
+                        }
 df_san_team_vendors = pd.DataFrame(san_team_vendors_dict)
 
 # данные запроса браузера
@@ -37,7 +40,7 @@ headers = {'User-Agent': UserAgent().random}
 
 # исходный сайт, который будем парсить( продумать запуск inputom)
 url = "https://www.san.team/catalog/"
-req = requests.get(url, headers=headers, timeout= 5).text
+req = requests.get(url, headers=headers, timeout= 10).text
 src = req
 
 #sg.Window(title=f"Parsing {url}", layout=[[]], margins=(400, 200)).read()
@@ -201,7 +204,7 @@ try:
                     
                     # перебор суб_категорий
             for sub_category_name, sub_category_href in all_sub_cat_dict.items():
-                req = requests.get(url=sub_category_href, headers=headers, timeout=5)
+                req = requests.get(url=sub_category_href, headers=headers, timeout=10)
                 src = req.text
                 soup = BeautifulSoup(src, "lxml")
                 count_pages = soup.find("div", class_="pagination").find_all("div", class_="pagination__item")
@@ -236,7 +239,7 @@ try:
                                 price = float(art_bs.find("div", class_ = "detail-product-buy__buttons").find("a", class_="buyoneclick").get("data-productprice").replace(',', '.').replace(' ', ''))
                                 vendor_count +=1
                                 df_san_team_vendors.loc[len(df_san_team_vendors.index)]=[art_name, art_text, price, art_href, category_name, sub_category_name]
-                                print(df_san_team_vendors)
+                                #print(df_san_team_vendors)
                 else:
                     if soup.find_all("div", class_ = "catalog-lvl-4__titlte") != None:
                         art_List = soup.find_all("div", class_ = "catalog-lvl-4__title")
@@ -265,7 +268,7 @@ try:
                                                 #print(price)
                                                 #print(art_href)
                                                 #print(category_name)
-                                    print(df_san_team_vendors)
+                                    #print(df_san_team_vendors)
         count +=1
 
 
@@ -293,10 +296,11 @@ try:
                                 'text_wrap': True,
                             })
         writer.sheets[sheet_name].set_column('D:D', None, link_format)
-except Exception:
-    print(f"Ошибка при обработке {category_name}: {sub_category_name}, артикул {art_name}: {art_href}")
-finally:
-    write_in_file(df_san_team_vendors)
+except Exception:  
+    print(f"Ошибка  при обработке {category_name}: {sub_category_name}, артикул {art_name}: {art_href}")
+    traceback.print_exc()
+""" finally:
+    write_in_file(df_san_team_vendors) """
     
 
 end_time = time.time()  # время окончания выполнения
